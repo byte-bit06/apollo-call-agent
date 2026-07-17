@@ -1,0 +1,27 @@
+{
+  "enabled": false,
+  "search_queries": [
+    "RTO registered training organisations",
+    "accounting firms",
+    "lawyer firms",
+    "marketing agencies",
+    "recruitment agencies",
+    "real estate agencies",
+    "IT support companies",
+    "commercial builders"
+  ],
+  "results_per_query": 5,
+  "discover_interval_hours": 2,
+  "call_delay_seconds": 45,
+  "daily_call_limit": 50,
+  "retry_after_hours": 24,
+  "calling_hours_start": 9,
+  "calling_hours_end": 17,
+  "calling_days": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ]
+}

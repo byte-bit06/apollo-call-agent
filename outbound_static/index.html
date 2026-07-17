@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Apollo Call Agent</title>
+  <meta name="description" content="AI-powered outbound sales dialer. Discover Australian business leads and trigger personalised Vapi calls automatically." />
+  <link rel="stylesheet" href="/static/index.css?v=5" />
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<!-- ── Login Screen ── -->
+<div id="login-screen" style="
+  position:fixed; inset:0; z-index:9999;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%);
+  display:flex; align-items:center; justify-content:center;
+">
+  <div style="
+    background:#fff; border-radius:20px; padding:48px 40px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.12); width:100%; max-width:420px;
+    border:1px solid #e2e8f0;
+  ">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="
+        width:56px; height:56px; background:linear-gradient(135deg,#16a34a,#22c55e);
+        border-radius:14px; display:inline-flex; align-items:center; justify-content:center;
+        margin-bottom:16px; box-shadow:0 8px 20px rgba(22,163,74,0.3);
+      ">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.55a16 16 0 0 0 6.29 6.29l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      </div>
+      <h1 style="font-size:1.6rem; font-weight:700; color:#0f172a; margin:0 0 6px;">Apollo Call Agent</h1>
+      <p style="color:#64748b; font-size:0.88rem; margin:0;">Sign in to access your dashboard</p>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <label style="display:block; font-size:0.78rem; font-weight:600; color:#374151; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Username</label>
+      <input id="login-username" type="text" placeholder="Enter username" autocomplete="username" style="
+        width:100%; padding:11px 14px; border:1.5px solid #e2e8f0; border-radius:10px;
+        font-size:0.9rem; color:#0f172a; background:#f8fafc; box-sizing:border-box;
+        outline:none; transition:border-color 0.2s;
+      " onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#e2e8f0'" />
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <label style="display:block; font-size:0.78rem; font-weight:600; color:#374151; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">Password</label>
+      <input id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" style="
+        width:100%; padding:11px 14px; border:1.5px solid #e2e8f0; border-radius:10px;
+        font-size:0.9rem; color:#0f172a; background:#f8fafc; box-sizing:border-box;
+        outline:none; transition:border-color 0.2s;
+      " onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#e2e8f0'" onkeydown="if(event.key==='Enter')App.auth.login()" />
+    </div>
+
+    <div id="login-error" style="display:none; color:#dc2626; font-size:0.82rem; margin-bottom:16px; text-align:center; background:#fef2f2; padding:8px 12px; border-radius:8px; border:1px solid #fecaca;"></div>
+
+    <button onclick="App.auth.login()" id="login-btn" style="
+      width:100%; padding:13px; background:linear-gradient(135deg,#16a34a,#22c55e);
+      color:#fff; border:none; border-radius:10px; font-size:0.95rem; font-weight:600;
+      cursor:pointer; box-shadow:0 4px 14px rgba(22,163,74,0.35);
+      transition:opacity 0.2s, transform 0.1s;
+    " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'"
+       onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+      Sign In
+    </button>
+  </div>
+</div>
+
+<div class="app-wrapper" id="app-wrapper" style="display:none;">
+
+
+  <!-- ── Left Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo"><i data-lucide="phone-call"></i></div>
+      <div class="brand-name">Apollo Call Agent</div>
+    </div>
+
+    <div class="sidebar-section-label">Menu</div>
+    <nav class="sidebar-nav">
+      <button class="tab-btn active" data-tab="tab-discover" onclick="App.tabs.show('tab-discover')">
+        <div class="tab-btn-content"><i data-lucide="search"></i> Discover</div>
+      </button>
+      <button class="tab-btn" data-tab="tab-new" onclick="App.tabs.show('tab-new')">
+        <div class="tab-btn-content"><i data-lucide="sparkles" style="color:var(--green);"></i> New Leads</div>
+        <span class="tab-badge badge-new" id="badge-new">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-callback" onclick="App.tabs.show('tab-callback')">
+        <div class="tab-btn-content"><i data-lucide="refresh-cw" style="color:var(--yellow);"></i> Call Back</div>
+        <span class="tab-badge badge-callback" id="badge-callback">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-contacted" onclick="App.tabs.show('tab-contacted')">
+        <div class="tab-btn-content"><i data-lucide="check-circle" style="color:var(--blue);"></i> Contacted</div>
+        <span class="tab-badge badge-contacted" id="badge-contacted">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-autopilot" onclick="App.tabs.show('tab-autopilot')">
+        <div class="tab-btn-content"><i data-lucide="cpu"></i> Auto-Pilot</div>
+        <span id="ap-nav-badge" style="display:none;width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);margin-left:4px;"></span>
+      </button>
+      <button class="tab-btn" data-tab="tab-calls" onclick="App.tabs.show('tab-calls')">
+        <div class="tab-btn-content"><i data-lucide="history"></i> Call Log</div>
+      </button>
+    </nav>
+
+    <div class="sidebar-section-label">General</div>
+    <nav class="sidebar-nav" style="flex: 0;">
+      <button class="tab-btn" data-tab="tab-settings" onclick="App.tabs.show('tab-settings')">
+        <div class="tab-btn-content"><i data-lucide="settings"></i> Settings</div>
+      </button>
+    </nav>
+
+    <!-- Sidebar footer status widget -->
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-title"><i data-lucide="activity" style="width:14px;height:14px;margin-right:4px;"></i> Connection Active</div>
+      <div class="sidebar-footer-desc" id="server-status-desc">FastAPI Outbound Service is running on port 8080. Webhook endpoint active.</div>
+      <button onclick="App.auth.logout()" style="
+        margin-top:12px; width:100%; padding:8px; background:rgba(220,38,38,0.08);
+        color:#dc2626; border:1px solid rgba(220,38,38,0.2); border-radius:8px;
+        font-size:0.78rem; font-weight:600; cursor:pointer; display:flex;
+        align-items:center; justify-content:center; gap:6px; transition:background 0.2s;
+      " onmouseover="this.style.background='rgba(220,38,38,0.15)'" onmouseout="this.style.background='rgba(220,38,38,0.08)'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Right Main Area ── -->
+  <div class="main-area">
+    
+    <!-- Topbar (User profile removed as requested) -->
+    <div class="topbar">
+      <div class="search-wrap">
+        <span class="search-icon"><i data-lucide="search" style="width:16px;height:16px;color:var(--text-muted);"></i></span>
+        <input type="text" class="search-input" id="dashboard-search" placeholder="Search leads by name or number..." oninput="App.leads.search(this.value)" />
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <main class="content">
+
+      <!-- Header & Quick Metrics -->
+      <div class="section-header">
+        <div>
+          <h1 class="section-title" id="page-display-title">Dashboard</h1>
+          <p class="section-desc" id="page-display-desc">Plan, prioritize, and accomplish your sales outbound calls with ease.</p>
+        </div>
+      </div>
+
+      <!-- Quick Stats Metrics Grid (Donezo Style) -->
+      <div class="metrics-grid">
+        <div class="metric-card highlight">
+          <div class="metric-header">
+            <span class="metric-title">Total Leads</span>
+            <i data-lucide="users"></i>
+          </div>
+          <div class="metric-value" id="stat-total-leads">0</div>
+          <div class="metric-sub">Across all buckets</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">New Queue</span>
+            <i data-lucide="sparkles" style="color: var(--green);"></i>
+          </div>
+          <div class="metric-value" id="stat-new-leads" style="color: var(--green);">0</div>
+          <div class="metric-sub">Ready to call</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Callbacks Pending</span>
+            <i data-lucide="refresh-cw" style="color: var(--yellow);"></i>
+          </div>
+          <div class="metric-value" id="stat-callback-leads" style="color: var(--text);">0</div>
+          <div class="metric-sub">Cooldown active</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-title">Calls Placed</span>
+            <i data-lucide="phone-call" style="color: var(--blue);"></i>
+          </div>
+          <div class="metric-value" id="stat-calls-placed" style="color: var(--blue);">0</div>
+          <div class="metric-sub">Session attempts</div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           DISCOVER TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel active" id="tab-discover">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Discover Australian Leads</h2>
+            <p class="section-desc">Search DuckDuckGo or paste website URLs to extract business details automatically.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="App.leads.addManualOpen()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:2px;"></i> Add Manually</button>
+        </div>
+
+        <div class="discover-grid">
+          <!-- Search Queries Card -->
+          <div class="glass-card input-card">
+            <label class="input-label" for="query-input">Search Queries</label>
+            <p class="input-hint">One query per line. "Australia" is added automatically if not included.</p>
+            <textarea id="query-input" placeholder="plumbers Brisbane&#10;accounting firms Melbourne&#10;gym studios Perth"></textarea>
+            <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+              <label class="input-label" style="margin:0;" for="results-per-query">Results per query:</label>
+              <input type="number" id="results-per-query" value="5" min="1" max="20" style="width:70px;" />
+            </div>
+          </div>
+
+          <!-- Direct URLs Card -->
+          <div class="glass-card input-card">
+            <label class="input-label" for="url-input">Direct Website URLs</label>
+            <p class="input-hint">One URL per line. Skips search and crawls directly.</p>
+            <textarea id="url-input" placeholder="https://www.example.com.au&#10;https://www.anotherbusiness.com.au"></textarea>
+          </div>
+        </div>
+
+        <!-- Action Row -->
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="discover-btn" onclick="App.discovery.start()">
+            <i data-lucide="play" style="width:14px;height:14px;margin-right:4px;"></i> Start Discovery
+          </button>
+          <button class="btn btn-danger btn-sm" id="cancel-btn" style="display:none;" onclick="App.discovery.cancel()">
+            <i data-lucide="square" style="width:14px;height:14px;margin-right:4px;"></i> Cancel
+          </button>
+          <div id="discover-progress" style="display:none;flex:1;min-width:200px;">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" id="progress-fill" style="width:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Log Panel -->
+        <div class="glass-card log-panel" style="margin-top:24px;" id="log-panel">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="input-label" style="margin:0;">Live Discovery Log</div>
+            <button class="btn btn-ghost btn-sm" onclick="App.discovery.clearLog()">Clear</button>
+          </div>
+          <div class="log-terminal" id="log-terminal">
+            <span style="color:#9ca3af;">Waiting to start discovery...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           NEW LEADS TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-new">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">New Leads</h2>
+            <p class="section-desc">Fresh leads ready to be called. Click a card to view and call.</p>
+          </div>
+          <div class="actions-bar">
+            <button class="btn btn-ghost btn-sm" onclick="App.leads.refresh()"><i data-lucide="refresh-cw" style="width:12px;height:12px;margin-right:2px;"></i> Refresh</button>
+            <button class="btn btn-ghost btn-sm" onclick="App.leads.addManualOpen()"><i data-lucide="plus" style="width:12px;height:12px;margin-right:2px;"></i> Add Lead</button>
+          </div>
+        </div>
+        <div class="leads-grid" id="new-leads-grid"></div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           CALL BACK LATER TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-callback">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Call Back Later</h2>
+            <p class="section-desc">Businesses that didn't answer, were busy, or went to voicemail.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="App.leads.refresh()"><i data-lucide="refresh-cw" style="width:12px;height:12px;margin-right:2px;"></i> Refresh</button>
+        </div>
+        <div class="leads-grid" id="callback-leads-grid"></div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           CONTACTED TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-contacted">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Contacted Leads</h2>
+            <p class="section-desc">Businesses where a live conversation was reached. Excluded from future discovery.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="App.leads.refresh()"><i data-lucide="refresh-cw" style="width:12px;height:12px;margin-right:2px;"></i> Refresh</button>
+        </div>
+        <div class="leads-grid" id="contacted-leads-grid"></div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           AUTO-PILOT TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-autopilot">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Auto-Pilot</h2>
+            <p class="section-desc">Fully autonomous lead discovery and calling — set it and forget it.</p>
+          </div>
+        </div>
+
+        <!-- Big toggle card -->
+        <div class="glass-card" style="padding:28px;margin-bottom:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div id="ap-toggle-icon" style="display:flex;align-items:center;justify-content:center;background:var(--bg);border-radius:50%;width:56px;height:56px;color:var(--text-muted);">
+                <i data-lucide="cpu" style="width:32px;height:32px;"></i>
+              </div>
+              <div>
+                <div id="ap-status-label" style="font-size:1.3rem;font-weight:800;letter-spacing:-0.02em;color: var(--accent);">Auto-Pilot is OFF</div>
+                <div id="ap-current-action" style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">Click Start to begin autonomous calling.</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;">
+              <button class="btn btn-primary" id="ap-start-btn" onclick="App.autopilot.start()" style="padding:12px 28px;font-size:1rem;border-radius:30px;"><i data-lucide="play" style="width:16px;height:16px;margin-right:4px;"></i> Start Auto-Pilot</button>
+              <button class="btn btn-danger" id="ap-stop-btn" onclick="App.autopilot.stop()" style="padding:12px 28px;font-size:1rem;border-radius:30px;display:none;"><i data-lucide="square" style="width:16px;height:16px;margin-right:4px;"></i> Stop</button>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+            <div style="text-align:center;">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--green);" id="ap-stat-calls-today">0</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Calls Today</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--accent);" id="ap-stat-calls-session">0</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Calls This Session</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:1.8rem;font-weight:800;color:var(--yellow);" id="ap-stat-leads-found">0</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Leads Discovered</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:1.1rem;font-weight:600;color:var(--text-muted);margin-top:6px;" id="ap-stat-next-discovery">—</div>
+              <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Next Discovery</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Config + Log split -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+          <!-- Configuration -->
+          <div class="glass-card" style="padding:24px;">
+            <div class="settings-section-label"><i data-lucide="sliders" style="width:14px;height:14px;margin-right:4px;"></i> Auto-Pilot Configuration</div>
+
+            <div class="form-group">
+              <label class="form-label" for="ap-queries">Search Queries <span style="color:var(--text-muted);font-weight:400;">(one per line)</span></label>
+              <textarea id="ap-queries" style="min-height:140px;" placeholder="dental clinics Sydney&#10;plumbers Melbourne&#10;gyms Brisbane&#10;accountants Perth"></textarea>
+              <p style="font-size:0.71rem;color:var(--text-muted);margin-top:5px;">"Australia" is appended automatically if no location term is found.</p>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="ap-results-per-q">Results / Query</label>
+                <input type="number" id="ap-results-per-q" value="5" min="1" max="15" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="ap-discover-interval">Discover Every (hrs)</label>
+                <input type="number" id="ap-discover-interval" value="2" min="1" max="24" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="ap-call-delay">Delay Between Calls (sec)</label>
+                <input type="number" id="ap-call-delay" value="45" min="10" max="300" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="ap-daily-limit">Daily Call Limit</label>
+                <input type="number" id="ap-daily-limit" value="50" min="1" max="500" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="ap-retry-hours">Retry No-Answer After (hrs)</label>
+                <input type="number" id="ap-retry-hours" value="24" min="1" max="168" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Calling Hours</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <input type="number" id="ap-hours-start" value="9" min="0" max="23" style="width:60px;" />
+                  <span style="color:var(--text-muted);">to</span>
+                  <input type="number" id="ap-hours-end" value="17" min="1" max="24" style="width:60px;" />
+                  <span style="font-size:0.72rem;color:var(--text-muted);">local time</span>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-ghost btn-sm" onclick="App.autopilot.saveConfig()" style="margin-top:4px;"><i data-lucide="save" style="width:12px;height:12px;margin-right:2px;"></i> Save Config</button>
+          </div>
+
+          <!-- Live Activity Log -->
+          <div class="glass-card" style="padding:24px;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+              <div class="settings-section-label" style="margin:0;"><i data-lucide="terminal" style="width:14px;height:14px;margin-right:4px;"></i> Live Activity Log</div>
+              <button class="btn btn-ghost btn-sm" onclick="App.autopilot.clearLog()">Clear</button>
+            </div>
+            <div class="log-terminal" id="ap-log-terminal" style="flex:1;min-height:320px;">
+              <span style="color:#9ca3af;">Auto-Pilot not running yet...</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           CALL LOG TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-calls">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Call Log</h2>
+            <p class="section-desc">History of all outbound call attempts.</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="App.calls.refresh()"><i data-lucide="refresh-cw" style="width:12px;height:12px;margin-right:2px;"></i> Refresh</button>
+        </div>
+        <div class="call-log-list" id="call-log-list"></div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           SETTINGS TAB
+      ═════════════════════════════════════════ -->
+      <div class="tab-panel" id="tab-settings">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title" style="font-size: 1.3rem;">Settings</h2>
+            <p class="section-desc">Configure your Vapi credentials and extraction model.</p>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <!-- Vapi Settings -->
+          <div class="glass-card settings-card">
+            <div class="settings-section-label"><i data-lucide="radio" style="width:14px;height:14px;margin-right:4px;"></i> Vapi Configuration</div>
+            <div class="form-group">
+              <label class="form-label" for="s-vapi-key">Vapi API Key</label>
+              <input type="password" id="s-vapi-key" placeholder="Your Vapi private key..." />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="s-assistant-id">Assistant ID</label>
+              <input type="text" id="s-assistant-id" placeholder="e.g. asst_XXXXXXXXX" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="s-phone-id">Phone Number ID</label>
+              <input type="text" id="s-phone-id" placeholder="e.g. phnum_XXXXXXXXX" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Call Mode</label>
+              <div class="toggle-wrap">
+                <label class="toggle">
+                  <input type="checkbox" id="s-override-prompt" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="font-size:0.82rem;color:var(--text-muted);">Override system prompt per lead</span>
+              </div>
+              <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;">Sends a fully-tailored system prompt per lead containing custom pain points and services.</p>
+            </div>
+          </div>
+
+          <!-- AI Settings -->
+          <div class="glass-card settings-card">
+            <div class="settings-section-label"><i data-lucide="brain" style="width:14px;height:14px;margin-right:4px;"></i> AI Extraction</div>
+            <div class="form-group">
+              <label class="form-label" for="s-gemini-key">Gemini API Key</label>
+              <input type="password" id="s-gemini-key" placeholder="Your Gemini API key..." />
+            </div>
+            <div class="divider"></div>
+            <div class="settings-section-label"><i data-lucide="map-pin" style="width:14px;height:14px;margin-right:4px;"></i> Australia Targeting</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;">Search queries automatically include "Australia" if no location term is found. Phone numbers are normalised to Australian E.164 format (+61...).</p>
+            <div class="divider"></div>
+            <div class="settings-section-label"><i data-lucide="link" style="width:14px;height:14px;margin-right:4px;"></i> Webhook URL</div>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;">Set this as your Vapi assistant's server URL to receive call outcomes & handle appointments:</p>
+            <code id="webhook-url-display" style="font-size:0.78rem;color:var(--accent);background:var(--accent-light);padding:8px 12px;border-radius:6px;display:block;word-break:break-all;font-weight:600;"></code>
+          </div>
+        </div>
+
+        <!-- Google Calendar Card -->
+        <div class="glass-card settings-card" style="margin-top: 20px;">
+          <div class="calendar-inner-grid">
+            
+            <!-- Left side: inputs -->
+            <div>
+              <div class="settings-section-label">
+                <i data-lucide="calendar" style="width:14px;height:14px;margin-right:4px;"></i> Google Calendar Integration
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="s-cal-id">Google Calendar ID</label>
+                <input type="text" id="s-cal-id" placeholder="primary" />
+                <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Use "primary" or your specific Google Calendar resource email.</p>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="s-cal-timezone">Timezone</label>
+                <input type="text" id="s-cal-timezone" placeholder="Australia/Melbourne" />
+                <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Timezone for checking slot availability.</p>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="s-cal-json">Google Service Account JSON Key</label>
+                <textarea id="s-cal-json" placeholder="Paste your Google Cloud Service Account JSON credentials here..." style="min-height:120px; font-family: monospace; font-size: 0.76rem;"></textarea>
+                <p style="font-size:0.72rem;color:var(--text-muted);margin-top:4px;">Required for live Google Calendar link. Leave empty to run in Mock Calendar mode.</p>
+              </div>
+            </div>
+
+            <!-- Right side: Custom Tools configuration details -->
+            <div>
+              <div class="settings-section-label">
+                <i data-lucide="webhook" style="width:14px;height:14px;margin-right:4px;"></i> Vapi Custom Tools Setup
+              </div>
+              <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+                Register the following two Custom Tools inside your **Vapi Dashboard** under the <strong>Tools</strong> tab. When the assistant needs to verify slots or book, Vapi will call this server's webhook URL automatically.
+              </p>
+
+              <!-- Tool 1 -->
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                  <span>1. check_calendar_availability</span>
+                  <span style="font-size:0.7rem; background: var(--accent-light); color: var(--accent); padding: 2px 6px; border-radius: 4px;">POST</span>
+                </div>
+                <p style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 6px;">Used to query available slots for a given day.</p>
+                <div style="font-size: 0.72rem; font-family: monospace; background: var(--bg); padding: 6px; border-radius: 4px; word-break: break-all; color: var(--text-dim);">
+                  <strong>Parameters:</strong> date (string, YYYY-MM-DD)
+                </div>
+              </div>
+
+              <!-- Tool 2 -->
+              <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 8px;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px; display: flex; justify-content: space-between;">
+                  <span>2. book_calendar_slot</span>
+                  <span style="font-size:0.7rem; background: var(--accent-light); color: var(--accent); padding: 2px 6px; border-radius: 4px;">POST</span>
+                </div>
+                <p style="font-size: 0.74rem; color: var(--text-muted); margin-bottom: 6px;">Used to schedule a client appointment.</p>
+                <div style="font-size: 0.72rem; font-family: monospace; background: var(--bg); padding: 6px; border-radius: 4px; word-break: break-all; color: var(--text-dim);">
+                  <strong>Parameters:</strong> name, email, phone, start_time_iso
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary" onclick="App.settings.save()" style="border-radius:30px;"><i data-lucide="save" style="width:14px;height:14px;margin-right:4px;"></i> Save Settings</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     LEAD EDIT / CALL MODAL
+═════════════════════════════════════════ -->
+<div class="modal-overlay" id="lead-modal-overlay" onclick="App.modal.closeOnOverlay(event)">
+  <div class="modal" id="lead-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Lead Details</div>
+      <button class="modal-close" onclick="App.modal.close()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="m-name">Business Name</label>
+          <input type="text" id="m-name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="m-industry">Industry</label>
+          <input type="text" id="m-industry" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-phone">Phone Number (E.164)</label>
+        <input type="text" id="m-phone" placeholder="+61412345678" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-services">Services</label>
+        <textarea id="m-services" style="min-height:80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-pain">Pain Points</label>
+        <textarea id="m-pain" style="min-height:80px;"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="m-status">Status</label>
+        <select id="m-status">
+          <option value="new">New Lead</option>
+          <option value="no_answer">Call Back Later</option>
+          <option value="contacted">Contacted</option>
+          <option value="do_not_call">Do Not Call</option>
+        </select>
+      </div>
+      
+      <!-- Dynamic Vapi System Prompt Context Preview -->
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label" style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px;">
+          <span>Vapi Context Variables Preview</span>
+          <span style="font-size:0.7rem; text-transform:none; color:var(--text-muted); font-weight:normal;">Dynamically formatted context sent to Vapi</span>
+        </label>
+        <div class="glass-card" style="padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; font-family:monospace; font-size:0.78rem; line-height:1.5; color:var(--text-dim); white-space:pre-wrap; word-break:break-word;" id="m-prompt-preview">
+        </div>
+      </div>
+      
+      <div id="modal-call-history" style="margin-top:16px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="modal-dnc-btn" onclick="App.modal.markDNC()"><i data-lucide="ban" style="width:12px;height:12px;margin-right:2px;"></i> Do Not Call</button>
+      <button class="btn btn-danger btn-sm" id="modal-delete-btn" onclick="App.modal.deleteLead()"><i data-lucide="trash-2" style="width:12px;height:12px;margin-right:2px;"></i> Delete</button>
+      <button class="btn btn-ghost btn-sm" onclick="App.modal.close()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="App.modal.save()"><i data-lucide="save" style="width:12px;height:12px;margin-right:2px;"></i> Save</button>
+      <button class="btn btn-success" id="modal-call-btn" onclick="App.modal.call()">
+        <i data-lucide="phone-call" style="width:14px;height:14px;margin-right:4px;"></i> Call Now
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Lead Manual Modal -->
+<div class="modal-overlay" id="add-modal-overlay" onclick="App.leads.addManualCloseOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Lead Manually</div>
+      <button class="modal-close" onclick="App.leads.addManualClose()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="am-name">Business Name *</label>
+          <input type="text" id="am-name" placeholder="Acme Plumbing" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="am-phone">Phone Number *</label>
+          <input type="text" id="am-phone" placeholder="+61412345678" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="am-industry">Industry</label>
+          <input type="text" id="am-industry" placeholder="Plumbing" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="am-url">Website URL</label>
+          <input type="text" id="am-url" placeholder="https://..." />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="am-services">Services</label>
+        <textarea id="am-services" style="min-height:70px;" placeholder="Brief description of what they do..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="am-pain">Pain Points</label>
+        <textarea id="am-pain" style="min-height:70px;" placeholder="Common challenges they likely face..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="App.leads.addManualClose()">Cancel</button>
+      <button class="btn btn-primary" onclick="App.leads.addManualSubmit()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:4px;"></i> Add Lead</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<script src="/static/index.js?v=5"></script>
+</body>
+</html>

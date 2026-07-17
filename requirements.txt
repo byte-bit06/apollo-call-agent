@@ -1,0 +1,11 @@
+fastapi==0.110.0
+uvicorn==0.28.0
+python-dotenv==1.0.1
+google-generativeai>=0.5.4
+openai==1.14.1
+google-api-python-client>=2.131.0
+google-auth>=2.29.0
+# Outbound Dialer — web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
