@@ -25,6 +25,8 @@ def _get_tz():
     except Exception:
         return zoneinfo.ZoneInfo("Australia/Melbourne")
 
+TZ = _get_tz()
+
 # File path for mock calendar storage
 MOCK_CALENDAR_FILE = os.path.join(os.path.dirname(__file__), "data", "mock_calendar.json")
 
