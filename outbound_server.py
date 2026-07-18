@@ -303,6 +303,7 @@ async def auth_middleware(request: Request, call_next):
         path in open_paths
         or path.startswith("/static")
         or path.startswith("/api/auth")
+        or path.startswith("/api/calendar")
     ):
         return await call_next(request)
 
@@ -684,6 +685,55 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
         return {"status": "processed", "outcome": outcome}
 
     return {"status": "ignored", "type": event_type}
+
+
+# ---------------------------------------------------------------------------
+# Calendar API
+# ---------------------------------------------------------------------------
+
+@app.get("/api/calendar/slots")
+def get_calendar_slots_api(date: str):
+    """Retrieve available slots on a given date (format: YYYY-MM-DD)."""
+    from google_calendar import get_free_slots
+    try:
+        slots = get_free_slots(date)
+        return {"date": date, "slots": slots}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/calendar/book")
+def book_calendar_slot_api(payload: dict):
+    """Book a time slot."""
+    from google_calendar import book_slot
+    from vapi_webhook import parse_date_time_to_iso
+    name = payload.get("name")
+    email = payload.get("email")
+    phone = payload.get("phone")
+    date_str = payload.get("date")
+    time_slot = payload.get("time_slot") or payload.get("time")
+    slot_time = payload.get("slot_time") or payload.get("slotTime")
+    course = payload.get("course", "")
+    
+    if not (name and email and phone):
+        raise HTTPException(status_code=400, detail="Missing required booking details (name, email, phone).")
+        
+    if not slot_time and date_str and time_slot:
+        try:
+            slot_time = parse_date_time_to_iso(date_str, time_slot)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to parse date/time: {str(e)}")
+            
+    if not slot_time:
+        raise HTTPException(status_code=400, detail="Missing booking time slot (slot_time or date + time required).")
+        
+    try:
+        res = book_slot(name, email, phone, slot_time, course)
+        if res.get("success"):
+            return res
+        else:
+            raise HTTPException(status_code=500, detail=res.get("error"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
