@@ -787,6 +787,8 @@ def get_autopilot_log(limit: int = 100):
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    port = int(os.getenv("OUTBOUND_PORT", "8080"))
+    # Render injects PORT; fall back to OUTBOUND_PORT then 8080 for local dev
+    port = int(os.getenv("PORT", os.getenv("OUTBOUND_PORT", "8080")))
+    is_dev = os.getenv("RENDER") is None  # RENDER env var is set automatically by Render
     logger.info(f"Starting AI Sales Outbound Dialer on port {port}")
-    uvicorn.run("outbound_server:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("outbound_server:app", host="0.0.0.0", port=port, reload=is_dev)

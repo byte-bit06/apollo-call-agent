@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: apollo-call-agent
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python outbound_server.py
+    plan: free
+    envVars:
+      - key: VAPI_API_KEY
+        sync: false
+      - key: VAPI_ASSISTANT_ID
+        sync: false
+      - key: VAPI_PHONE_NUMBER_ID
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        value: primary
+      - key: TIMEZONE
+        value: Australia/Melbourne
+      - key: OVERRIDE_SYSTEM_PROMPT
+        value: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+    disk:
+      name: apollo-data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
