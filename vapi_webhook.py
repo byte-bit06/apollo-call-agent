@@ -32,7 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DEFAULT_TO_EMAIL = os.getenv("EMAIL_TO", "shxuryatech@gmail.com")
+DEFAULT_TO_EMAIL = os.getenv("EMAIL_TO", "apollo.aitech@gmail.com")
 
 # Easiest way is Resend (https://resend.com) - get a free API key, no card needed.
 RESEND_API_KEY = os.getenv("RESEND_API_KEY") 
