@@ -701,6 +701,19 @@ def get_calendar_slots_api(date: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/calendar/slots")
+def post_calendar_slots_api(payload: dict):
+    """Retrieve available slots on a given date via POST JSON (format: YYYY-MM-DD)."""
+    from google_calendar import get_free_slots
+    date = payload.get("date")
+    if not date:
+        raise HTTPException(status_code=400, detail="Missing 'date' parameter in payload.")
+    try:
+        slots = get_free_slots(date)
+        return {"date": date, "slots": slots}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.post("/api/calendar/book")
 def book_calendar_slot_api(payload: dict):
     """Book a time slot."""
