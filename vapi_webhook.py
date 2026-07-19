@@ -665,7 +665,7 @@ def process_vapi_tool_calls(payload: dict) -> dict:
                     slot_list = ", ".join(slots)
                     result_msg = f"Available time slots for {date_str} (Melbourne Time) are: {slot_list}. Please ask the client which of these times works best for them."
                 else:
-                    result_msg = f"There are no available slots for {date_str}. Please suggest a different date (Monday to Friday, between 9:00 AM and 5:00 PM)."
+                    result_msg = f"There are no available slots for {date_str}. Please suggest a different date (Monday to Friday, between 10:00 AM and 5:00 PM)."
                 results.append({"toolCallId": tc_id, "result": result_msg})
             except Exception as e:
                 results.append({"toolCallId": tc_id, "result": f"Error checking availability: {str(e)}. Please try a date format like YYYY-MM-DD (e.g. 2026-07-20)."})

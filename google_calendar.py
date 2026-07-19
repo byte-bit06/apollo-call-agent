@@ -148,8 +148,8 @@ def get_free_slots(date_str: str) -> list:
     GOOGLE_CALENDAR_ID = _get_calendar_id()
     TIMEZONE_STR = _get_timezone_str()
 
-    # Check work hours: 9:00 AM to 5:00 PM (17:00) Melbourne Time
-    start_work = datetime.combine(target_date, time(9, 0), tzinfo=TZ)
+    # Check work hours: 10:00 AM to 5:00 PM (17:00) Melbourne Time
+    start_work = datetime.combine(target_date, time(10, 0), tzinfo=TZ)
     end_work = datetime.combine(target_date, time(17, 0), tzinfo=TZ)
     
     # Generate all possible 30-minute slots in the window
