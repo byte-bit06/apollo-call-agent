@@ -70,7 +70,11 @@ def generate_html_email(
     demo_requested: str = None,
     follow_up_timeframe: str = None,
     primary_pain_points = None,
-    success_evaluation: str = None
+    success_evaluation: str = None,
+    db_company: str = "",
+    db_services: str = "",
+    db_pains: str = "",
+    db_industry: str = ""
 ) -> str:
     """Generates a beautiful, responsive HTML email for the call report."""
     call_id = call.get("id", "N/A")
@@ -107,17 +111,24 @@ def generate_html_email(
             <div style="font-size: 22px; font-weight: 800; color: #047857;">{success_evaluation} <span style="font-size: 14px; font-weight: 500; color: #065f46;">/ 10</span></div>
         </div>"""
 
-    # Lead Information Section
-    lead_details_html = ""
-    if contact_name or email_collected or company_name:
-        company_line = f"<p style='margin: 6px 0 0 0; color: #475569; font-size: 14px;'>Company: <strong>{company_name}</strong></p>" if company_name else ""
-        lead_details_html = f"""
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 8px; margin-bottom: 24px;">
-            <h3 style="margin-top: 0; color: #0f172a; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">Contact Information</h3>
-            <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 700;">{contact_name or 'Anonymous Customer'}</p>
-            <p style="margin: 8px 0 0 0; color: #334155; font-size: 14px;">Email: <a href="mailto:{email_collected}" style="color: #4f46e5; text-decoration: none; font-weight: 600;">{email_collected or 'Not collected'}</a></p>
-            {company_line}
-        </div>"""
+    # Lead Information Section (always shown with all database and call fields)
+    display_company = company_name or db_company or "Unknown Business"
+    display_name = contact_name or db_company or "Anonymous Customer"
+    display_industry = db_industry or "N/A"
+    display_services = db_services or "N/A"
+    display_pains = db_pains or "N/A"
+
+    lead_details_html = f"""
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 8px; margin-bottom: 24px;">
+        <h3 style="margin-top: 0; color: #0f172a; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">Lead Information & Contact Info</h3>
+        <p style="margin: 0; color: #1e293b; font-size: 16px; font-weight: 700;">{display_company}</p>
+        <p style="margin: 8px 0 0 0; color: #475569; font-size: 14px;"><strong>Contact Person:</strong> {display_name}</p>
+        <p style="margin: 4px 0 0 0; color: #475569; font-size: 14px;"><strong>Phone:</strong> {phone}</p>
+        <p style="margin: 4px 0 0 0; color: #475569; font-size: 14px;"><strong>Email:</strong> <a href="mailto:{email_collected or ''}" style="color: #4f46e5; text-decoration: none; font-weight: 600;">{email_collected or 'Not collected'}</a></p>
+        <p style="margin: 4px 0 0 0; color: #475569; font-size: 14px;"><strong>Industry:</strong> {display_industry}</p>
+        <p style="margin: 8px 0 0 0; color: #475569; font-size: 13px; line-height: 1.4; border-top: 1px dashed #cbd5e1; padding-top: 8px;"><strong>Scraped Services:</strong> {display_services}</p>
+        <p style="margin: 4px 0 0 0; color: #475569; font-size: 13px; line-height: 1.4;"><strong>Target Pain Points:</strong> {display_pains}</p>
+    </div>"""
 
     # Next Steps / Booking Section
     booking_status = "No"
@@ -480,6 +491,26 @@ def send_via_smtp(html_content: str, subject: str) -> bool:
         logger.error(f"Failed to send email via SMTP: {str(e)}")
         return False
 
+def lookup_lead_by_phone(phone: str) -> dict:
+    if not phone:
+        return None
+    try:
+        from outbound_crawler import normalise_au_phone
+        norm_target = normalise_au_phone(phone)
+        
+        import json
+        from pathlib import Path
+        leads_file = Path(__file__).parent / "leads.json"
+        if leads_file.exists():
+            leads = json.loads(leads_file.read_text(encoding="utf-8"))
+            for l in leads:
+                lead_phone = l.get("phoneNumber")
+                if lead_phone and normalise_au_phone(lead_phone) == norm_target:
+                    return l
+    except Exception as e:
+        logger.error(f"Error looking up lead by phone: {e}")
+    return None
+
 def process_webhook_payload(payload: dict):
     """Processes Vapi webhook payload and dispatches the email."""
     # Log raw webhook payload for debugging/inspection
@@ -539,6 +570,25 @@ def process_webhook_payload(payload: dict):
     if not isinstance(customer, dict):
         customer = {}
     phone = customer.get("number") or call.get("customer", {}).get("number") or "Unknown"
+
+    # Query leads database for this phone number
+    db_lead = lookup_lead_by_phone(phone)
+    db_company = ""
+    db_services = ""
+    db_pains = ""
+    db_industry = ""
+
+    if db_lead:
+        db_company = db_lead.get("businessName", "")
+        db_services = db_lead.get("services", "")
+        db_pains = db_lead.get("painPoints", "")
+        db_industry = db_lead.get("industry", "")
+
+        # Use database business name as fallback for company/contact name
+        if not company_name:
+            company_name = db_company
+        if not contact_name:
+            contact_name = db_company
     
     subject = f"AI Automations Call Report: {phone} - {event_type.replace('-', ' ').title()}"
     html_content = generate_html_email(
@@ -552,7 +602,11 @@ def process_webhook_payload(payload: dict):
         demo_requested=demo_requested,
         follow_up_timeframe=follow_up_timeframe,
         primary_pain_points=primary_pain_points,
-        success_evaluation=str(success_evaluation) if success_evaluation is not None else "N/A"
+        success_evaluation=str(success_evaluation) if success_evaluation is not None else "N/A",
+        db_company=db_company,
+        db_services=db_services,
+        db_pains=db_pains,
+        db_industry=db_industry
     )
     
     # Select mechanism with cascading fallback
