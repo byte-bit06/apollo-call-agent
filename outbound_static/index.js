@@ -121,6 +121,7 @@ const State = {
   discovery: { jobId: null, polling: null },
   modal: { leadId: null },
   searchQuery: "",
+  authenticated: false,
 };
 
 // ─────────────────────────────────────────────
@@ -265,12 +266,17 @@ const App = {
   // ── Leads ────────────────────────────────
   leads: {
     async refresh() {
+      if (!State.authenticated) return;
       try {
         const leads = await apiGet("/api/leads");
         State.leads = leads;
         App.leads.render();
       } catch (e) {
-        toast(`Failed to load leads: ${e.message}`, "error");
+        if (e.message.includes("401")) {
+          App.auth.showLogin();
+        } else {
+          toast(`Failed to load leads: ${e.message}`, "error");
+        }
       }
     },
 
@@ -854,6 +860,7 @@ ${$("m-pain").value.trim()}`;
     },
 
     showLogin() {
+      State.authenticated = false;
       $("login-screen").style.display = "flex";
       $("app-wrapper").style.display = "none";
       // Clear fields
@@ -863,6 +870,7 @@ ${$("m-pain").value.trim()}`;
     },
 
     showDashboard() {
+      State.authenticated = true;
       $("login-screen").style.display = "none";
       $("app-wrapper").style.display = "flex";
       // Load data once authenticated
@@ -923,6 +931,95 @@ ${$("m-pain").value.trim()}`;
       } catch {}
       App.auth.showLogin();
     },
+  },
+
+  // ── Quick Call ──────────────────────────────────
+  quickCall: {
+    open() {
+      $("qc-name").value = "";
+      $("qc-industry").value = "";
+      $("qc-phone").value = "";
+      $("qc-services").value = "";
+      $("qc-pain").value = "";
+
+      const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      const dateStr = new Date().toLocaleDateString('en-US', dateOptions);
+
+      const updatePreview = () => {
+        const previewText = `Today’s date is ${dateStr}. Only suggest or accept booking dates on or after today. When calling check_calendar_availability.
+
+Business Name: ${$("qc-name").value.trim()}
+Industry: ${$("qc-industry").value.trim()}
+
+Services:
+${$("qc-services").value.trim()}
+
+Common Business Challenges:
+${$("qc-pain").value.trim()}`;
+
+        $("qc-prompt-preview").textContent = previewText;
+      };
+
+      updatePreview();
+
+      $("qc-name").oninput = updatePreview;
+      $("qc-industry").oninput = updatePreview;
+      $("qc-services").oninput = updatePreview;
+      $("qc-pain").oninput = updatePreview;
+
+      $("quickcall-modal-overlay").classList.add("open");
+      if (window.lucide) lucide.createIcons();
+    },
+
+    close() {
+      $("quickcall-modal-overlay").classList.remove("open");
+    },
+
+    closeOnOverlay(e) {
+      if (e.target === $("quickcall-modal-overlay")) App.quickCall.close();
+    },
+
+    async submit() {
+      const name = $("qc-name").value.trim();
+      const phone = $("qc-phone").value.trim();
+      const industry = $("qc-industry").value.trim();
+      const services = $("qc-services").value.trim();
+      const pain = $("qc-pain").value.trim();
+      const btn = $("quickcall-btn");
+
+      if (!name || !phone) {
+        toast("Business Name and Phone Number are required.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader" class="spin" style="width:14px;height:14px;margin-right:4px;"></i> Calling...`;
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const result = await apiPost("/api/leads/quick-call", {
+          businessName: name,
+          phoneNumber: phone,
+          industry: industry,
+          services: services,
+          painPoints: pain
+        });
+
+        if (result.success) {
+          toast(`Call initiated to ${name}!`, "success");
+          App.quickCall.close();
+          setTimeout(() => { App.calls.refresh(); }, 1500);
+        } else {
+          toast(`Call failed: ${result.error}`, "error");
+        }
+      } catch (e) {
+        toast(`Error: ${e.message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="phone-call" style="width:14px;height:14px;margin-right:4px;"></i> Start Call Now`;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
   },
 };
 

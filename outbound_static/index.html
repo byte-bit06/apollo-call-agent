@@ -192,7 +192,10 @@
             <h2 class="section-title" style="font-size: 1.3rem;">Discover Australian Leads</h2>
             <p class="section-desc">Search DuckDuckGo or paste website URLs to extract business details automatically.</p>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="App.leads.addManualOpen()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:2px;"></i> Add Manually</button>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="App.leads.addManualOpen()"><i data-lucide="plus" style="width:14px;height:14px;margin-right:2px;"></i> Add Manually</button>
+            <button class="btn btn-success btn-sm" onclick="App.quickCall.open()"><i data-lucide="phone-call" style="width:14px;height:14px;margin-right:2px;"></i> Quick Call</button>
+          </div>
         </div>
 
         <div class="discover-grid">
@@ -659,6 +662,59 @@
     </div>
   </div>
 </div>
+</div>
+
+<!-- ── Quick Call Modal ── -->
+<div class="modal-overlay" id="quickcall-modal-overlay" onclick="App.quickCall.closeOnOverlay(event)">
+  <div class="modal" id="quickcall-modal">
+    <div class="modal-header">
+      <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+        <i data-lucide="phone-call" style="width:18px;height:18px;color:var(--accent);"></i>
+        <span>Quick Outbound Call</span>
+      </div>
+      <button class="modal-close" onclick="App.quickCall.close()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="qc-name">Business Name</label>
+          <input type="text" id="qc-name" placeholder="E.g. Hammond Institute" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="qc-industry">Industry</label>
+          <input type="text" id="qc-industry" placeholder="E.g. Professional Education" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="qc-phone">Phone Number (E.164 format)</label>
+        <input type="text" id="qc-phone" placeholder="E.g. +61412345678" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="qc-services">Services</label>
+        <textarea id="qc-services" style="min-height:70px;" placeholder="E.g. Aged care training, disability courses..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="qc-pain">Pain Points</label>
+        <textarea id="qc-pain" style="min-height:70px;" placeholder="E.g. High booking drop-offs, admin overhead..."></textarea>
+      </div>
+      
+      <!-- Dynamic Vapi System Prompt Context Preview -->
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label" style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px;">
+          <span>Vapi Context Variables Preview</span>
+          <span style="font-size:0.7rem; text-transform:none; color:var(--text-muted); font-weight:normal;">Real-time formatted context sent to Vapi</span>
+        </label>
+        <div class="glass-card" style="padding:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; font-family:monospace; font-size:0.78rem; line-height:1.5; color:var(--text-dim); white-space:pre-wrap; word-break:break-word;" id="qc-prompt-preview">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="App.quickCall.close()">Cancel</button>
+      <button class="btn btn-success" id="quickcall-btn" onclick="App.quickCall.submit()">
+        <i data-lucide="phone-call" style="width:14px;height:14px;margin-right:4px;"></i> Start Call Now
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast Container -->

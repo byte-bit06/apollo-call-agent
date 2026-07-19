@@ -510,6 +510,74 @@ def delete_lead(lead_id: str):
     return {"deleted": True}
 
 
+class QuickCallRequest(BaseModel):
+    businessName: str
+    industry: Optional[str] = ""
+    services: Optional[str] = ""
+    painPoints: Optional[str] = ""
+    phoneNumber: str
+
+
+@app.post("/api/leads/quick-call")
+def quick_call_lead(req: QuickCallRequest):
+    from outbound_caller import trigger_call, build_default_prompt
+
+    settings = get_settings()
+    api_key = settings["VAPI_API_KEY"]
+    assistant_id = settings["VAPI_ASSISTANT_ID"]
+    phone_number_id = settings["VAPI_PHONE_NUMBER_ID"]
+
+    if not api_key:
+        raise HTTPException(400, "VAPI_API_KEY is not configured. Go to Settings.")
+    if not assistant_id:
+        raise HTTPException(400, "VAPI_ASSISTANT_ID is not configured. Go to Settings.")
+    if not phone_number_id:
+        raise HTTPException(400, "VAPI_PHONE_NUMBER_ID is not configured. Go to Settings.")
+
+    override_mode = settings.get("OVERRIDE_SYSTEM_PROMPT", "false").lower() == "true"
+    custom_prompt = build_default_prompt(
+        business_name=req.businessName,
+        industry=req.industry,
+        services=req.services,
+        pain_points=req.painPoints,
+    ) if override_mode else None
+
+    result = trigger_call(
+        phone_number=req.phoneNumber,
+        assistant_id=assistant_id,
+        phone_number_id=phone_number_id,
+        api_key=api_key,
+        business_name=req.businessName,
+        industry=req.industry,
+        services=req.services,
+        pain_points=req.painPoints,
+        override_system_prompt=override_mode,
+        custom_system_prompt=custom_prompt,
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Log the call attempt in call log history
+    call_entry = {
+        "id": str(uuid.uuid4()),
+        "vapi_call_id": result.get("call_id"),
+        "lead_id": "manual",
+        "businessName": req.businessName,
+        "phoneNumber": req.phoneNumber,
+        "status": "initiated" if result["success"] else "failed",
+        "outcome": None,
+        "duration": None,
+        "startedAt": now,
+        "endedAt": None,
+        "error": result.get("error"),
+    }
+    calls = load_calls()
+    calls.insert(0, call_entry)
+    save_calls(calls)
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Outbound Calling
 # ---------------------------------------------------------------------------
