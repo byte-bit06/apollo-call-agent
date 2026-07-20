@@ -195,7 +195,15 @@ class AutoPilot:
 
     def _is_within_calling_hours(self, cfg: dict) -> bool:
         """Returns True if current local hour is within configured calling window."""
-        now_local = datetime.now()  # local system time
+        from zoneinfo import ZoneInfo
+        import os
+        tz_name = os.getenv("TIMEZONE", "Australia/Melbourne")
+        try:
+            tz = ZoneInfo(tz_name)
+        except Exception:
+            tz = ZoneInfo("Australia/Melbourne")
+
+        now_local = datetime.now(tz)
         hour = now_local.hour
         weekday = now_local.weekday()
         calling_days = cfg.get("calling_days", list(range(5)))
