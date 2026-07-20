@@ -60,7 +60,9 @@ function initials(name) {
 
 function statusLabel(status) {
   const map = {
-    new: "New",
+    new: "Pending",
+    approved: "Approved",
+    rejected: "Rejected",
     no_answer: "Callback",
     contacted: "Contacted",
     do_not_call: "DNC",
@@ -286,7 +288,7 @@ const App = {
     },
 
     render() {
-      const allNewLeads = State.leads.filter(l => l.status === "new");
+      const allNewLeads = State.leads.filter(l => l.status === "new" || l.status === "approved");
       const allCallbackLeads = State.leads.filter(l => l.status === "no_answer");
       const allContactedLeads = State.leads.filter(l => l.status === "contacted" || l.status === "do_not_call");
 
@@ -315,7 +317,7 @@ const App = {
         );
       }
 
-      const newLeads = displayedLeads.filter(l => l.status === "new");
+      const newLeads = displayedLeads.filter(l => l.status === "new" || l.status === "approved");
       const callbackLeads = displayedLeads.filter(l => l.status === "no_answer");
       const contactedLeads = displayedLeads.filter(l => l.status === "contacted" || l.status === "do_not_call");
 
@@ -361,6 +363,22 @@ const App = {
       const callBtnClass = lead.status === "no_answer" ? "btn-warning" : "btn-success";
       const isDNC = lead.status === "do_not_call";
 
+      let footerActions = "";
+      if (lead.status === "new") {
+        footerActions = `
+          <button class="btn btn-sm" style="background:#d1e7dd; color:#0f5132; border-color:rgba(25, 135, 84, 0.2);" onclick="event.stopPropagation(); App.leads.approve('${lead.id}')">
+            <i data-lucide="check" style="width:12px;height:12px;margin-right:2px;"></i> Approve
+          </button>
+          <button class="btn btn-sm" style="background:#f8d7da; color:#842029; border-color:rgba(220, 53, 69, 0.2);" onclick="event.stopPropagation(); App.leads.reject('${lead.id}')">
+            <i data-lucide="x" style="width:12px;height:12px;margin-right:2px;"></i> Reject
+          </button>
+        `;
+      } else if (lead.status === "approved" || lead.status === "no_answer") {
+        if (lead.phoneNumber) {
+          footerActions = `<button class="btn ${callBtnClass} btn-sm" onclick="event.stopPropagation(); App.leads.quickCall('${lead.id}')">${callBtnLabel}</button>`;
+        }
+      }
+
       return `
         <div class="glass-card lead-card" onclick="App.modal.open('${lead.id}')">
           <div class="lead-card-header">
@@ -386,7 +404,7 @@ const App = {
           <div class="lead-footer">
             <span class="call-count-info">${callCountInfo}</span>
             <div style="display:flex;gap:6px;">
-              ${!isDNC && lead.phoneNumber ? `<button class="btn ${callBtnClass} btn-sm" onclick="event.stopPropagation();App.leads.quickCall('${lead.id}')">${callBtnLabel}</button>` : ""}
+              ${footerActions}
             </div>
           </div>
         </div>`;
@@ -406,6 +424,30 @@ const App = {
         }
       } catch (e) {
         toast(`${e.message}`, "error");
+      }
+    },
+
+    async approve(leadId) {
+      const lead = State.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      try {
+        await apiPatch(`/api/leads/${leadId}/status`, { status: "approved" });
+        toast(`Lead "${lead.businessName}" approved for calling.`, "success");
+        App.leads.refresh();
+      } catch (e) {
+        toast(`Failed to approve lead: ${e.message}`, "error");
+      }
+    },
+
+    async reject(leadId) {
+      const lead = State.leads.find(l => l.id === leadId);
+      if (!lead) return;
+      try {
+        await apiPatch(`/api/leads/${leadId}/status`, { status: "rejected" });
+        toast(`Lead "${lead.businessName}" rejected.`, "warning");
+        App.leads.refresh();
+      } catch (e) {
+        toast(`Failed to reject lead: ${e.message}`, "error");
       }
     },
 
@@ -470,12 +512,24 @@ const App = {
 
       // Call button state
       const callBtn = $("modal-call-btn");
-      if (lead.status === "do_not_call" || !lead.phoneNumber) {
+      if (!lead.phoneNumber) {
+        callBtn.disabled = true;
+        callBtn.innerHTML = `<i data-lucide="phone-off"></i> No Phone Number`;
+      } else if (lead.status === "do_not_call") {
         callBtn.disabled = true;
         callBtn.innerHTML = `<i data-lucide="phone-off"></i> Do Not Call`;
+      } else if (lead.status === "rejected") {
+        callBtn.disabled = true;
+        callBtn.innerHTML = `<i data-lucide="phone-off"></i> Rejected`;
+      } else if (lead.status === "new") {
+        callBtn.disabled = true;
+        callBtn.innerHTML = `<i data-lucide="phone"></i> Pending Approval`;
       } else if (lead.status === "no_answer") {
         callBtn.disabled = false;
         callBtn.innerHTML = `<i data-lucide="refresh-cw"></i> Retry Call`;
+      } else if (lead.status === "approved") {
+        callBtn.disabled = false;
+        callBtn.innerHTML = `<i data-lucide="phone-call"></i> Call Now`;
       } else {
         callBtn.disabled = false;
         callBtn.innerHTML = `<i data-lucide="phone-call"></i> Call Now`;

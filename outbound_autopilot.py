@@ -233,10 +233,11 @@ class AutoPilot:
             
             # Check uncalled leads backlog (leads with status == 'new' and a valid number)
             all_leads = self.leads_fn()
-            uncalled_leads = [l for l in all_leads if l.get("status") == "new" and l.get("phoneNumber")]
-            backlog_limit_reached = len(uncalled_leads) >= 20
+            uncalled_leads = [l for l in all_leads if l.get("status") == "approved" and l.get("phoneNumber")]
+            unreviewed_leads = [l for l in all_leads if l.get("status") == "new" and l.get("phoneNumber")]
+            backlog_limit_reached = len(unreviewed_leads) >= 20
             
-            out_of_leads = len(uncalled_leads) == 0
+            out_of_leads = len(uncalled_leads) == 0 and len(unreviewed_leads) == 0
             time_since_last_discovery = (now - last_discovery_at).total_seconds() if last_discovery_at else 999999
             
             # Trigger discovery if:
@@ -378,8 +379,9 @@ class AutoPilot:
     def _run_calling_cycle(self, cfg: dict):
         """Calls all eligible new and callback leads."""
         if not self._is_within_calling_hours(cfg):
-            self.current_action = "Outside calling hours — waiting..."
-            self._log("🕐 Outside calling hours. Calls paused.", level="info")
+            if self.current_action != "Outside calling hours — waiting...":
+                self.current_action = "Outside calling hours — waiting..."
+                self._log("🕐 Outside calling hours. Calls paused.", level="info")
             return
 
         daily_limit = cfg.get("daily_call_limit", 50)
@@ -405,7 +407,7 @@ class AutoPilot:
             if not lead.get("phoneNumber"):
                 continue
             status = lead.get("status", "new")
-            if status == "new":
+            if status == "approved":
                 eligible.append(lead)
             elif status == "no_answer":
                 last_called = lead.get("lastCalledAt")

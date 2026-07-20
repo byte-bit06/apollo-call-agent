@@ -487,7 +487,7 @@ def update_lead(lead_id: str, updates: dict):
 
 @app.patch("/api/leads/{lead_id}/status")
 def set_lead_status(lead_id: str, body: dict):
-    valid_statuses = {"new", "no_answer", "contacted", "do_not_call"}
+    valid_statuses = {"new", "approved", "rejected", "no_answer", "contacted", "do_not_call"}
     new_status = body.get("status")
     if new_status not in valid_statuses:
         raise HTTPException(400, f"Invalid status. Must be one of: {valid_statuses}")
@@ -604,8 +604,13 @@ def call_lead(lead_id: str):
         raise HTTPException(404, "Lead not found.")
     if not lead.get("phoneNumber"):
         raise HTTPException(400, "This lead has no phone number.")
-    if lead.get("status") == "do_not_call":
+    status = lead.get("status")
+    if status == "rejected":
+        raise HTTPException(403, "This lead is marked Rejected and cannot be called.")
+    if status == "do_not_call":
         raise HTTPException(403, "This lead is marked Do Not Call.")
+    if status not in ("approved", "no_answer"):
+        raise HTTPException(400, "Only approved leads can be called. Please approve the lead first.")
 
     override_mode = settings.get("OVERRIDE_SYSTEM_PROMPT", "false").lower() == "true"
     custom_prompt = build_default_prompt(

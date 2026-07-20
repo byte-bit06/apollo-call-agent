@@ -647,7 +647,9 @@ textarea { min-height: 120px; }
   font-weight: 600;
 }
 
-.status-new      { background: var(--green-dim); color: var(--green); }
+.status-new      { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+.status-approved { background: var(--green-dim); color: var(--green); }
+.status-rejected { background: var(--red-dim); color: var(--red); }
 .status-no_answer { background: var(--yellow-dim); color: var(--text); }
 .status-contacted { background: var(--blue-dim); color: var(--blue); }
 .status-do_not_call { background: var(--red-dim); color: var(--red); }
