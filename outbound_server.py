@@ -772,6 +772,16 @@ def get_calendar_slots_api(date: str):
 @app.post("/api/calendar/slots")
 def post_calendar_slots_api(payload: dict):
     """Retrieve available slots on a given date via POST JSON (format: YYYY-MM-DD)."""
+    # Detect Vapi tool call request format
+    message = payload.get("message", {}) if isinstance(payload, dict) else {}
+    if "toolCalls" in message or "toolCallList" in message or payload.get("type") == "tool-calls":
+        if process_vapi_tool_calls:
+            try:
+                return process_vapi_tool_calls(payload)
+            except Exception as e:
+                logger.error(f"Vapi slots tool call error: {e}")
+                return {"results": [{"toolCallId": tc.get("id"), "result": f"Error: {str(e)}"} for tc in (message.get("toolCalls") or [])]}
+
     from google_calendar import get_free_slots
     date = payload.get("date")
     if not date:
@@ -785,6 +795,16 @@ def post_calendar_slots_api(payload: dict):
 @app.post("/api/calendar/book")
 def book_calendar_slot_api(payload: dict):
     """Book a time slot."""
+    # Detect Vapi tool call request format
+    message = payload.get("message", {}) if isinstance(payload, dict) else {}
+    if "toolCalls" in message or "toolCallList" in message or payload.get("type") == "tool-calls":
+        if process_vapi_tool_calls:
+            try:
+                return process_vapi_tool_calls(payload)
+            except Exception as e:
+                logger.error(f"Vapi booking tool call error: {e}")
+                return {"results": [{"toolCallId": tc.get("id"), "result": f"Error: {str(e)}"} for tc in (message.get("toolCalls") or [])]}
+
     from google_calendar import book_slot
     from vapi_webhook import parse_date_time_to_iso
     name = payload.get("name")
