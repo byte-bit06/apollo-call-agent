@@ -60,7 +60,7 @@ def run():
     for u in URLS:
         try:
             parsed = urlparse(u)
-            domain = parsed.netloc.lower().lstrip("www.")
+            domain = parsed.netloc.lower().removeprefix("www.")
             if domain not in existing_domains:
                 target_urls.append(u)
         except Exception:
@@ -69,7 +69,7 @@ def run():
     print(f"Processing {len(target_urls)} new domains...")
     
     for url in target_urls:
-        domain = urlparse(url).netloc.lower().lstrip("www.")
+        domain = urlparse(url).netloc.lower().removeprefix("www.")
         print(f"\nProcessing: {domain}...")
         
         # Crawl site content

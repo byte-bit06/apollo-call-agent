@@ -437,7 +437,7 @@ def add_lead_manually(req: AddLeadRequest):
     from urllib.parse import urlparse
     from outbound_crawler import normalise_au_phone
 
-    domain = req.domain or (urlparse(req.url).netloc.lstrip("www.") if req.url else "manual")
+    domain = req.domain or (urlparse(req.url).netloc.removeprefix("www.") if req.url else "manual")
     phone = normalise_au_phone(req.phoneNumber) if req.phoneNumber else ""
 
     leads = load_leads()

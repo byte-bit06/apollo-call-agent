@@ -108,7 +108,7 @@ def _extract_base_url(url: str) -> str | None:
     """Returns scheme://netloc or None if the URL is from a blocked domain."""
     try:
         parsed = urlparse(url)
-        netloc = parsed.netloc.lower().lstrip("www.")
+        netloc = parsed.netloc.lower().removeprefix("www.")
         if not netloc or any(blocked in netloc for blocked in BLOCKED_DOMAINS):
             return None
         return f"{parsed.scheme or 'https'}://{parsed.netloc}"
@@ -436,7 +436,7 @@ def discover_leads(
     unique_urls = []
     for u in candidate_urls:
         parsed = urlparse(u if u.startswith("http") else "https://" + u)
-        domain = parsed.netloc.lower().lstrip("www.")
+        domain = parsed.netloc.lower().removeprefix("www.")
         if domain and domain not in seen_domains:
             seen_domains.add(domain)
             full = f"{parsed.scheme or 'https'}://{parsed.netloc}"
@@ -450,7 +450,7 @@ def discover_leads(
             _log("[!] Discovery cancelled.")
             break
 
-        domain = urlparse(url).netloc.lower().lstrip("www.")
+        domain = urlparse(url).netloc.lower().removeprefix("www.")
         _log(f"--- {domain} ---")
 
         site_text = gather_site_text(url, log_fn=log_fn)
