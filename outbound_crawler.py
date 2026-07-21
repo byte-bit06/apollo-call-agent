@@ -309,7 +309,7 @@ def extract_business_profiles(text: str, api_key: str, log_fn=None) -> list:
     prompt = EXTRACTION_PROMPT.format(text=truncated)
 
     # Try models in order: gemini-2.5-flash, gemini-1.5-flash
-    models = ["gemini-2.5-flash", "gemini-1.5-flash"]
+    models = ["gemini-2.5-flash", "gemini-1.5-flash-latest"]
     raw = None
 
     for model in models:
