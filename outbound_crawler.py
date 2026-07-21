@@ -487,7 +487,7 @@ def discover_leads(
                 "addedAt": datetime.now(timezone.utc).isoformat(),
             }
             leads.append(lead)
-            _log(f"  ✓ Lead saved: {lead['businessName']} | {lead['phoneNumber']}")
+            _log(f"  [Saved] Lead saved: {lead['businessName']} | {lead['phoneNumber']}")
             
         time.sleep(0.5)
 
