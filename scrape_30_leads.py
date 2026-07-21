@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 ENV_PATH = Path(__file__).parent.resolve() / ".env"
 load_dotenv(str(ENV_PATH))
 
-from outbound_crawler import gather_site_text, extract_business_profiles, normalise_au_phone
+from outbound_crawler import gather_site_text, extract_business_profiles, normalise_au_phone, ddg_search
 from supabase_db import db_load_leads, db_save_leads, db_add_lead
 
 def gemini_search(query: str, api_key: str, num_results: int = 15) -> list:
@@ -79,8 +79,8 @@ def run():
     for category_name, query in categories.items():
         print(f"\n--- Scraping Category: {category_name} ---")
         
-        # Get search results using search grounding
-        candidate_urls = gemini_search(query, api_key, num_results=18)
+        # Get search results using DuckDuckGo search (bypasses Google Search Grounding daily quota)
+        candidate_urls = ddg_search(query, num_results=15)
         
         # Filter and clean domains
         unique_urls = []
