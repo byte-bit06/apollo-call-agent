@@ -22,6 +22,10 @@ services:
         value: false
       - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
     disk:
       name: apollo-data
       mountPath: /opt/render/project/src
