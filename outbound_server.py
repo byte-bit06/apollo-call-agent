@@ -90,24 +90,22 @@ def _save_json(path: Path, data):
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+from supabase_db import db_load_leads, db_save_leads, db_load_calls, db_save_calls
+
 def load_leads() -> list:
-    with _data_lock:
-        return _load_json(LEADS_FILE, [])
+    return db_load_leads()
 
 
 def save_leads(leads: list):
-    with _data_lock:
-        _save_json(LEADS_FILE, leads)
+    db_save_leads(leads)
 
 
 def load_calls() -> list:
-    with _data_lock:
-        return _load_json(CALLS_FILE, [])
+    return db_load_calls()
 
 
 def save_calls(calls: list):
-    with _data_lock:
-        _save_json(CALLS_FILE, calls)
+    db_save_calls(calls)
 
 
 def get_contacted_domains() -> set:

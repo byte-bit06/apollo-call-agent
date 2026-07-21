@@ -73,21 +73,14 @@ def save_config(cfg: dict):
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+from supabase_db import db_load_autopilot_logs, db_add_autopilot_log
+
 def load_log() -> list:
-    if LOG_FILE.exists():
-        try:
-            data = json.loads(LOG_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, list):
-                return data[-500:]  # keep last 500 entries
-        except Exception:
-            pass
-    return []
+    return db_load_autopilot_logs()
 
 
 def append_log_entry(entry: dict):
-    log = load_log()
-    log.append(entry)
-    LOG_FILE.write_text(json.dumps(log[-500:], indent=2, ensure_ascii=False), encoding="utf-8")
+    db_add_autopilot_log(entry.get("msg", ""), entry.get("level", "info"))
 
 
 def get_calls_today_count() -> int:
