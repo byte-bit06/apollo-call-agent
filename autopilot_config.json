@@ -15,7 +15,7 @@
   "call_delay_seconds": 45,
   "daily_call_limit": 50,
   "retry_after_hours": 24,
-  "calling_hours_start": 9,
+  "calling_hours_start": 10,
   "calling_hours_end": 17,
   "calling_days": [
     0,

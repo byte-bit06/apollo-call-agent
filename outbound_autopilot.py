@@ -47,7 +47,7 @@ DEFAULT_CONFIG = {
     "call_delay_seconds": 45,
     "daily_call_limit": 50,
     "retry_after_hours": 24,
-    "calling_hours_start": 9,
+    "calling_hours_start": 10,
     "calling_hours_end": 17,
     "calling_days": [0, 1, 2, 3, 4],  # Mon=0 .. Fri=4
 }
@@ -207,7 +207,7 @@ class AutoPilot:
         hour = now_local.hour
         weekday = now_local.weekday()
         calling_days = cfg.get("calling_days", list(range(5)))
-        start = cfg.get("calling_hours_start", 9)
+        start = cfg.get("calling_hours_start", 10)
         end = cfg.get("calling_hours_end", 17)
         return weekday in calling_days and start <= hour < end
 
@@ -261,10 +261,10 @@ class AutoPilot:
             # If uncalled leads backlog is 20 or more, hold discovery!
             if backlog_limit_reached:
                 due_for_discovery = False
-                self.current_action = f"Discovery paused: queue has {len(uncalled_leads)} uncalled leads."
+                self.current_action = f"Discovery paused: queue has {len(unreviewed_leads)} unreviewed leads."
                 # Log once in a while
                 if now.second == 0 or last_discovery_at is None:
-                    self._log(f"ℹ️ Lead discovery paused: uncalled leads backlog ({len(uncalled_leads)}) is >= 20. Scanning calling queue first.", level="info")
+                    self._log(f"ℹ️ Lead discovery paused: unreviewed leads backlog ({len(unreviewed_leads)}) is >= 20. Please review/approve pending leads first.", level="info")
 
             if due_for_discovery:
                 if out_of_leads and last_discovery_at is not None:
@@ -291,7 +291,12 @@ class AutoPilot:
             # ── Step 3: Wait until next cycle check (60s) ──
             time_until_scheduled = max(0, int((last_discovery_at + timedelta(hours=interval_hours) - datetime.now(timezone.utc)).total_seconds())) if last_discovery_at else 0
             next_desc = f"{time_until_scheduled // 60}m remaining" if time_until_scheduled > 0 else "Due"
-            self.current_action = f"Waiting... Next scheduled discovery: {next_desc} (or early if out of leads)"
+            
+            # Show both calling and discovery status in current action
+            if not self._is_within_calling_hours(cfg):
+                self.current_action = f"Outside calling hours (calls paused). Next discovery: {next_desc}"
+            else:
+                self.current_action = f"Waiting... Next scheduled discovery: {next_desc} (or early if out of leads)"
             self._wait_sleep(60)
 
         self.status = "stopped"
