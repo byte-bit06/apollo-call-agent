@@ -99,6 +99,33 @@ def db_save_leads(leads: list):
     except Exception as e:
         logger.error(f"Supabase POST leads failed with exception: {e}")
 
+def db_add_lead(lead: dict):
+    """Insert or upsert a single lead to Supabase immediately."""
+    local_leads = _load_json(LEADS_FILE, [])
+    local_leads = [l for l in local_leads if l.get("domain") != lead.get("domain")]
+    local_leads.append(lead)
+    _save_json(LEADS_FILE, local_leads)
+    
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return
+        
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/leads"
+        headers = get_headers()
+        headers["Prefer"] = "resolution=merge-duplicates,return=representation"
+        
+        cleaned = dict(lead)
+        if "id" in cleaned and not cleaned["id"]:
+            del cleaned["id"]
+        if "callHistory" in cleaned and cleaned["callHistory"] is None:
+            cleaned["callHistory"] = []
+            
+        response = requests.post(url, headers=headers, json=cleaned, timeout=10)
+        if response.status_code not in (200, 201):
+            logger.error(f"Supabase POST single lead failed: {response.status_code} {response.text}")
+    except Exception as e:
+        logger.error(f"Supabase POST single lead failed with exception: {e}")
+
 # ─── Calls Table Operations ───
 
 def db_load_calls() -> list:
