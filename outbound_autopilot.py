@@ -415,13 +415,6 @@ class AutoPilot:
             status = lead.get("status", "new")
             if status == "approved":
                 eligible.append(lead)
-            elif status == "no_answer":
-                last_called = lead.get("lastCalledAt")
-                if last_called:
-                    last_dt = datetime.fromisoformat(last_called.replace("Z", "+00:00"))
-                    hours_since = (now - last_dt).total_seconds() / 3600
-                    if hours_since >= retry_after_hours:
-                        eligible.append(lead)
 
         if not eligible:
             self.current_action = "No eligible leads to call right now."
