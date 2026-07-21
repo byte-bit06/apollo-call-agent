@@ -498,15 +498,12 @@ def lookup_lead_by_phone(phone: str) -> dict:
         from outbound_crawler import normalise_au_phone
         norm_target = normalise_au_phone(phone)
         
-        import json
-        from pathlib import Path
-        leads_file = Path(__file__).parent / "leads.json"
-        if leads_file.exists():
-            leads = json.loads(leads_file.read_text(encoding="utf-8"))
-            for l in leads:
-                lead_phone = l.get("phoneNumber")
-                if lead_phone and normalise_au_phone(lead_phone) == norm_target:
-                    return l
+        from supabase_db import db_load_leads
+        leads = db_load_leads()
+        for l in leads:
+            lead_phone = l.get("phoneNumber")
+            if lead_phone and normalise_au_phone(lead_phone) == norm_target:
+                return l
     except Exception as e:
         logger.error(f"Error looking up lead by phone: {e}")
     return None
