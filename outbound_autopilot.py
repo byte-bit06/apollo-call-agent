@@ -44,7 +44,7 @@ DEFAULT_CONFIG = {
     ],
     "results_per_query": 5,
     "discover_interval_hours": 2,
-    "call_delay_seconds": 45,
+    "call_delay_seconds": 300,
     "daily_call_limit": 50,
     "retry_after_hours": 24,
     "calling_hours_start": 10,
