@@ -10,88 +10,151 @@ from urllib.parse import urlparse
 ENV_PATH = Path(__file__).parent.resolve() / ".env"
 load_dotenv(str(ENV_PATH))
 
-from outbound_crawler import gather_site_text, extract_business_profiles, ddg_search
+from outbound_crawler import gather_site_text, extract_business_profiles
 from supabase_db import db_load_leads, db_add_lead
 
-# Set up logging / print helper
+BLOCKED_DOMAINS = {
+    "yelp.com", "yellowpages.com.au", "truelocal.com.au", "oneflare.com.au", 
+    "hipages.com.au", "service.com.au", "serviceseeking.com.au", "facebook.com", 
+    "instagram.com", "twitter.com", "linkedin.com", "youtube.com", "pinterest.com", 
+    "clutch.co", "localsearch.com.au", "wordofmouth.com.au", "productreview.com.au", 
+    "local.com.au", "seek.com.au", "indeed.com", "domain.com.au", "realestate.com.au", 
+    "servicesaustralia.gov.au", "airbnb.com", "booking.com", "tripadvisor.com", "google.com",
+    "mapquest.com", "whitepages.com.au", "truelocal.com"
+}
+
 def log(msg):
-    print(f"[Scraper] {msg}")
+    print(f"[Trades Scraper] {msg}")
+
+def gemini_search_grounding(query: str, api_key: str) -> list:
+    """Uses Gemini Search Grounding to find local trades business sites and returns grounding redirect URLs."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    prompt = (
+        f"Find 60 real, active, distinct individual local service business websites in Australia for the query: '{query}'. "
+        "Avoid any directories, portals, aggregators, or social media sites. List their business names and website homepages."
+    )
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "tools": [{"googleSearch": {}}]
+    }
+    
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        log(f"  Querying Gemini search grounding for '{query}' (Attempt {attempt}/{max_retries})...")
+        try:
+            r = requests.post(url, json=payload, timeout=30)
+            if r.status_code == 200:
+                resp_json = r.json()
+                try:
+                    candidates = resp_json.get('candidates', [])
+                    if not candidates:
+                        log("  No candidates returned. Retrying...")
+                        time.sleep(5)
+                        continue
+                        
+                    metadata = candidates[0].get('groundingMetadata', {})
+                    chunks = metadata.get('groundingChunks', [])
+                    
+                    redirect_urls = []
+                    for chunk in chunks:
+                        uri = chunk.get('web', {}).get('uri')
+                        if uri:
+                            redirect_urls.append(uri)
+                            
+                    log(f"  Extracted {len(redirect_urls)} redirect URLs from grounding metadata.")
+                    return redirect_urls
+                except Exception as e:
+                    log(f"  Error parsing grounding metadata response: {e}")
+            elif r.status_code == 429:
+                log("  Quota exceeded (429). Waiting 60 seconds before retry...")
+                time.sleep(60)
+            else:
+                log(f"  Gemini search grounding request failed: {r.status_code} {r.text}")
+                time.sleep(5)
+        except Exception as e:
+            log(f"  Error running Gemini search grounding: {e}")
+            time.sleep(5)
+            
+    return []
+
+def resolve_redirect_url(redirect_url: str) -> str:
+    """Resolves a vertexaisearch redirect URL to the final destination URL."""
+    try:
+        r = requests.head(redirect_url, allow_redirects=True, timeout=8)
+        if r.status_code == 200:
+            return r.url
+    except Exception:
+        # Fallback to get request if head fails
+        try:
+            r = requests.get(redirect_url, allow_redirects=True, timeout=8)
+            if r.status_code == 200:
+                return r.url
+        except Exception:
+            pass
+    return ""
 
 def run():
-    log("=== mass Trades Lead discovery & crawler ===")
+    log("=== Mass Trades Leads Scraper (Supabase On-The-Fly) ===")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         log("Error: GEMINI_API_KEY is not configured in .env")
         return
         
-    # Load existing database leads to prevent duplicates
+    # Load existing leads to prevent duplicates
     existing_leads = db_load_leads()
     existing_domains = {l["domain"] for l in existing_leads}
     log(f"Loaded {len(existing_leads)} existing leads from Supabase.")
     
     # 5 Industries requested by the user
-    industries = {
-        "Plumbing": ["plumbers", "plumbing services", "emergency plumber"],
-        "Electrical": ["electricians", "electrical contractors", "local electrician"],
-        "HVAC": ["air conditioning installation", "HVAC repairs", "aircon service"],
-        "Locksmiths": ["locksmith services", "emergency locksmith", "local locksmith"],
-        "Pest Control": ["pest control services", "termite treatment", "pest exterminator"]
+    target_queries = {
+        "Plumbing": "local commercial plumbers in Melbourne Sydney Brisbane Adelaide Perth Hobart Australia",
+        "Electrical": "local commercial electricians in Melbourne Sydney Brisbane Adelaide Perth Hobart Australia",
+        "HVAC": "local air conditioning repairs and HVAC installation services in Melbourne Sydney Brisbane Adelaide Perth Hobart Australia",
+        "Locksmiths": "local emergency locksmith services in Melbourne Sydney Brisbane Adelaide Perth Hobart Australia",
+        "Pest Control": "local commercial pest control and termite treatment services in Melbourne Sydney Brisbane Adelaide Perth Hobart Australia"
     }
     
-    # Major Australian cities
-    cities = [
-        "Melbourne", "Sydney", "Brisbane", "Perth", "Adelaide",
-        "Gold Coast", "Canberra", "Newcastle", "Wollongong", "Hobart"
-    ]
+    # Phase 1: Gather redirect URLs from search grounding (5 calls total to avoid quota limit)
+    all_redirects = [] # list of (redirect_url, industry)
+    for industry, query in target_queries.items():
+        redirects = gemini_search_grounding(query, api_key)
+        for r_url in redirects:
+            all_redirects.append((r_url, industry))
+        time.sleep(5.0) # Small delay between search grounding requests
+        
+    log(f"\nPhase 1 Complete! Gathered {len(all_redirects)} raw grounding sources. Starting resolution...")
     
-    # Build list of queries
-    queries = []
-    for industry_name, terms in industries.items():
-        for term in terms:
-            for city in cities:
-                queries.append((f"{term} {city}", industry_name))
-                
-    log(f"Generated {len(queries)} search query combinations.")
-    
-    # Phase 1: Gather candidate URLs
-    candidate_urls = [] # list of (url, industry)
+    # Phase 2: Resolve redirect URLs to final homepages
+    candidate_urls = [] # list of (final_url, industry)
     seen_domains = set()
     
-    log("\n--- Phase 1: Gathering Candidate URLs via DuckDuckGo Search ---")
-    query_count = 0
-    for query_str, industry_name in queries:
-        # Limit search queries initially to avoid DDG search blocking
-        if len(candidate_urls) >= 400:
-            log("Gathered 400+ candidate domains. Moving to Phase 2.")
-            break
+    for idx, (r_url, industry) in enumerate(all_redirects):
+        if idx % 10 == 0:
+            log(f"Resolving redirects: [{idx}/{len(all_redirects)}]...")
             
-        query_count += 1
-        log(f"[{query_count}/{len(queries)}] Searching for: '{query_str}'...")
-        
+        final_url = resolve_redirect_url(r_url)
+        if not final_url:
+            continue
+            
         try:
-            urls = ddg_search(query_str, num_results=12)
-            new_added = 0
-            for u in urls:
-                try:
-                    parsed = urlparse(u if u.startswith("http") else "https://" + u)
-                    domain = parsed.netloc.lower().removeprefix("www.")
-                    if domain and domain not in existing_domains and domain not in seen_domains:
-                        seen_domains.add(domain)
-                        clean_url = f"{parsed.scheme or 'https'}://{parsed.netloc}"
-                        candidate_urls.append((clean_url, industry_name))
-                        new_added += 1
-                except Exception:
-                    pass
-            log(f"  -> Added {new_added} new unique candidates. Total so far: {len(candidate_urls)}")
-        except Exception as e:
-            log(f"  Error searching DDG for '{query_str}': {e}")
+            parsed = urlparse(final_url)
+            domain = parsed.netloc.lower().removeprefix("www.")
             
-        time.sleep(2.0) # Polite delay between DuckDuckGo queries
-        
-    log(f"\nPhase 1 Complete! Gathered {len(candidate_urls)} unique candidate B2B homepages.")
+            # Check blocked directories
+            if any(blocked in domain for blocked in BLOCKED_DOMAINS):
+                continue
+                
+            if domain and domain not in existing_domains and domain not in seen_domains:
+                seen_domains.add(domain)
+                clean_url = f"{parsed.scheme or 'https'}://{parsed.netloc}"
+                candidate_urls.append((clean_url, industry))
+        except Exception:
+            pass
+            
+    log(f"\nPhase 2 Complete! Resolved {len(candidate_urls)} clean, unique local business URLs.")
     
-    # Phase 2: Crawl and extract profiles, saving immediately to Supabase
-    log("\n--- Phase 2: Crawling & Profiling Sites (Saving to Supabase immediately) ---")
+    # Phase 3: Crawl websites and extract profiles, saving immediately to Supabase
+    log("\n--- Phase 3: Crawling & Profiling Sites (Saving to Supabase immediately) ---")
     leads_added_count = 0
     
     for idx, (url, industry) in enumerate(candidate_urls):
@@ -99,7 +162,6 @@ def run():
         log(f"\n[{idx + 1}/{len(candidate_urls)}] Crawling: {domain} ({industry})...")
         
         try:
-            # Crawl site content
             site_text = gather_site_text(url)
             if not site_text.strip():
                 log("  Skipping (no content retrieved from website).")
