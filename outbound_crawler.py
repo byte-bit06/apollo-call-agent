@@ -117,9 +117,9 @@ def _extract_base_url(url: str) -> str | None:
 
 
 def _ddg_library_search(query: str, num_results: int) -> list:
-    """Uses the duckduckgo_search library (most reliable, handles rate limits)."""
+    """Uses the ddgs library (most reliable, handles rate limits)."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         urls = []
         seen = set()
         with DDGS() as ddgs:
@@ -136,7 +136,7 @@ def _ddg_library_search(query: str, num_results: int) -> list:
     except ImportError:
         return []
     except Exception as e:
-        logger.warning(f"duckduckgo_search library failed: {e}")
+        logger.warning(f"ddgs library failed: {e}")
         return []
 
 
